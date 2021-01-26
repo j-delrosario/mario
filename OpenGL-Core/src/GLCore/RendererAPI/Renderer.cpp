@@ -19,6 +19,7 @@ namespace GLCore::RendererAPI {
 		glm::vec4 Color;
 		glm::vec2 TexCoords;
 		float TexIndex;
+		glm::mat4 Transform;
 	};
 
 	struct RendererData
@@ -66,6 +67,18 @@ namespace GLCore::RendererAPI {
 		glEnableVertexArrayAttrib(s_Data.QuadVA, 3);
 		glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, TexIndex));
 
+		glEnableVertexArrayAttrib(s_Data.QuadVA, 4);
+		glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)offsetof(Vertex, Transform));
+
+		glEnableVertexArrayAttrib(s_Data.QuadVA, 5);
+		glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)(offsetof(Vertex, Transform) + 16));
+
+		glEnableVertexArrayAttrib(s_Data.QuadVA, 6);
+		glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)(offsetof(Vertex, Transform) + 32));
+
+		glEnableVertexArrayAttrib(s_Data.QuadVA, 7);
+		glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const void*)(offsetof(Vertex, Transform) + 48));
+
 		uint32_t indices[MaxIndexCount];
 		uint32_t offset = 0;
 		uint32_t pattern[] = { 0, 1, 2, 2, 3, 0 };
@@ -105,7 +118,12 @@ namespace GLCore::RendererAPI {
 		}
 		glUniform1iv(loc, 32, samplers);
 
-		EnableBlend();
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glEnable(GL_BLEND);
+
+		glEnable(GL_DEPTH_TEST);
 	}
 
 	void Renderer::Shutdown()
@@ -142,7 +160,7 @@ namespace GLCore::RendererAPI {
 		s_Data.TextureSlotIndex = 1;
 	}
 
-	void Renderer::DrawQuad(const glm::vec2& position, const glm::vec2& size, const glm::vec4& color)
+	void Renderer::DrawQuad(const RendererSpecs& rs)
 	{
 		if (s_Data.IndexCount >= MaxIndexCount) {
 			EndBatch();
@@ -150,45 +168,78 @@ namespace GLCore::RendererAPI {
 			BeginBatch();
 		}
 
-		float textureIndex = 0.0f;
+		float textureIndex = TexIDtoTexIndex(rs.textureID);
 
-		s_Data.QuadBufferPtr->Position = { position.x, position.y, 0.0f };
-		s_Data.QuadBufferPtr->Color = color;
-		s_Data.QuadBufferPtr->TexCoords = { 0.0f, 0.0f };
-		s_Data.QuadBufferPtr->TexIndex = textureIndex;
-		s_Data.QuadBufferPtr++;
+		glm::vec4 c_Position = Center({ 0.0f, 0.0f }, rs.size);
 
-		s_Data.QuadBufferPtr->Position = { position.x + size.x, position.y, 0.0f };
-		s_Data.QuadBufferPtr->Color = color;
-		s_Data.QuadBufferPtr->TexCoords = { 1.0f, 0.0f };
-		s_Data.QuadBufferPtr->TexIndex = textureIndex;
-		s_Data.QuadBufferPtr++;
+		glm::vec2 r_Position = Rotate({ c_Position.x, c_Position.y }, rs.rotation);
+		UpdateQuadBuffer({ r_Position.x + rs.position.x, r_Position.y + rs.position.y, rs.position.z }, rs.color, { rs.texCoords.x, rs.texCoords.y }, textureIndex);
 
-		s_Data.QuadBufferPtr->Position = { position.x + size.x, position.y + size.y, 0.0f };
-		s_Data.QuadBufferPtr->Color = color;
-		s_Data.QuadBufferPtr->TexCoords = { 1.0f, 1.0f };
-		s_Data.QuadBufferPtr->TexIndex = textureIndex;
-		s_Data.QuadBufferPtr++;
+		r_Position = Rotate({ c_Position.z, c_Position.y }, rs.rotation);
+		UpdateQuadBuffer({ r_Position.x + rs.position.x, r_Position.y + rs.position.y, rs.position.z }, rs.color, { rs.texCoords.z, rs.texCoords.y }, textureIndex);
 
-		s_Data.QuadBufferPtr->Position = { position.x, position.y + size.y, 0.0f };
-		s_Data.QuadBufferPtr->Color = color;
-		s_Data.QuadBufferPtr->TexCoords = { 0.0f, 1.0f };
-		s_Data.QuadBufferPtr->TexIndex = textureIndex;
-		s_Data.QuadBufferPtr++;
+		r_Position = Rotate({ c_Position.z, c_Position.w }, rs.rotation);
+		UpdateQuadBuffer({ r_Position.x + rs.position.x, r_Position.y + rs.position.y, rs.position.z }, rs.color, { rs.texCoords.z, rs.texCoords.w }, textureIndex);
+
+		r_Position = Rotate({ c_Position.x, c_Position.w }, rs.rotation);
+		UpdateQuadBuffer({ r_Position.x + rs.position.x, r_Position.y + rs.position.y, rs.position.z }, rs.color, { rs.texCoords.x, rs.texCoords.w }, textureIndex);
 
 		s_Data.IndexCount += 6;
 	}
 
-	void Renderer::DrawQuad(const glm::vec2& position, const glm::vec2& size, uint32_t textureID)
+	void Renderer::SetClearColor(const glm::vec4& color)
 	{
-		if (s_Data.IndexCount >= MaxIndexCount || s_Data.TextureSlotIndex > 31) {
-			EndBatch();
-			Flush();
-			BeginBatch();
-		}
+		glClearColor(color.r, color.g, color.b, color.a);
+	}
 
-		constexpr glm::vec4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
+	void Renderer::Clear()
+	{
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	}
 
+	void Renderer::DisableBlend()
+	{
+		glDisable(GL_BLEND);
+		glDisable(GL_DEPTH_TEST);
+	}
+
+	void Renderer::BeginScene(const OrthographicCamera& camera)
+	{
+		glUseProgram(s_Data.Shader->GetRendererID());
+		s_Data.Shader->SetUniformMat4("u_ViewProjection", camera.GetViewProjectionMatrix());
+		s_Data.Shader->SetUniformMat4("u_Transform", glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f)));
+	}
+
+	void Renderer::BeginScene(const EditorCamera& camera)
+	{
+		glUseProgram(s_Data.Shader->GetRendererID());
+		s_Data.Shader->SetUniformMat4("u_ViewProjection", camera.GetViewProjectionMatrix());
+		s_Data.Shader->SetUniformMat4("u_Transform", glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f)));
+	}
+
+	void Renderer::BeginScene(const PerspectiveCamera& camera)
+	{
+		glUseProgram(s_Data.Shader->GetRendererID());
+		s_Data.Shader->SetUniformMat4("u_ViewProjection", camera.GetViewProjectionMatrix());
+		s_Data.Shader->SetUniformMat4("u_Transform", glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f)));
+	}
+
+	void Renderer::EndScene()
+	{
+	}
+
+	void Renderer::UpdateQuadBuffer(const glm::vec3& position, const glm::vec4& color, const glm::vec2& texCoords, float textureIndex)
+	{
+		s_Data.QuadBufferPtr->Position = position;
+		s_Data.QuadBufferPtr->Color = color;
+		s_Data.QuadBufferPtr->TexCoords = texCoords;
+		s_Data.QuadBufferPtr->TexIndex = textureIndex;
+		s_Data.QuadBufferPtr->Transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+		s_Data.QuadBufferPtr++;
+	}
+
+	float Renderer::TexIDtoTexIndex(uint32_t textureID)
+	{
 		float textureIndex = 0.0f;
 		for (uint32_t i = 0; i < s_Data.TextureSlotIndex; i++)
 		{
@@ -205,60 +256,22 @@ namespace GLCore::RendererAPI {
 			s_Data.TextureSlotIndex++;
 		}
 
-		s_Data.QuadBufferPtr->Position = { position.x, position.y, 0.0f };
-		s_Data.QuadBufferPtr->Color = color;
-		s_Data.QuadBufferPtr->TexCoords = { 0.0f, 0.0f };
-		s_Data.QuadBufferPtr->TexIndex = textureIndex;
-		s_Data.QuadBufferPtr++;
-
-		s_Data.QuadBufferPtr->Position = { position.x + size.x, position.y, 0.0f };
-		s_Data.QuadBufferPtr->Color = color;
-		s_Data.QuadBufferPtr->TexCoords = { 1.0f, 0.0f };
-		s_Data.QuadBufferPtr->TexIndex = textureIndex;
-		s_Data.QuadBufferPtr++;
-
-		s_Data.QuadBufferPtr->Position = { position.x + size.x, position.y + size.y, 0.0f };
-		s_Data.QuadBufferPtr->Color = color;
-		s_Data.QuadBufferPtr->TexCoords = { 1.0f, 1.0f };
-		s_Data.QuadBufferPtr->TexIndex = textureIndex;
-		s_Data.QuadBufferPtr++;
-
-		s_Data.QuadBufferPtr->Position = { position.x, position.y + size.y, 0.0f };
-		s_Data.QuadBufferPtr->Color = color;
-		s_Data.QuadBufferPtr->TexCoords = { 0.0f, 1.0f };
-		s_Data.QuadBufferPtr->TexIndex = textureIndex;
-		s_Data.QuadBufferPtr++;
-
-		s_Data.IndexCount += 6;
+		return textureIndex;
 	}
 
-	void Renderer::SetClearColor(const glm::vec4& color)
+
+	glm::vec4 Renderer::Center(const glm::vec2& position, const glm::vec2& size)
 	{
-		glClearColor(color.r, color.g, color.b, color.a);
+		return { position.x - size.x / 2, position.y - size.y / 2,
+				 position.x + size.x / 2, position.y + size.y / 2 };
 	}
 
-	void Renderer::Clear()
+	glm::vec2 Renderer::Rotate(const glm::vec2& point, float rotation)
 	{
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	}
+		float cos = glm::cos(-rotation);
+		float sin = glm::sin(-rotation);
 
-	void Renderer::EnableBlend()
-	{
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-		glEnable(GL_DEPTH_TEST);
-	}
-
-	void Renderer::BeginScene(const OrthographicCamera& camera)
-	{
-		glUseProgram(s_Data.Shader->GetRendererID());
-		s_Data.Shader->SetUniformMat4("u_ViewProjection", camera.GetViewProjectionMatrix());
-		s_Data.Shader->SetUniformMat4("u_Transform", glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f)));
-	}
-
-	void Renderer::EndScene()
-	{
+		return { point.x * cos - point.y * sin, point.y * cos + point.x * sin };
 	}
 
 }

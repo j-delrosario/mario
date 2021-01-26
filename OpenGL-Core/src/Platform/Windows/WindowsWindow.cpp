@@ -45,6 +45,7 @@ namespace GLCore {
 			glfwSetErrorCallback(GLFWErrorCallback);
 			s_GLFWInitialized = true;
 		}
+		glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
 		m_Window = glfwCreateWindow((int)props.Width, (int)props.Height, m_Data.Title.c_str(), nullptr, nullptr);
 
