@@ -28,13 +28,5 @@ public:
 private:
 	void CreateCamera();
 private:
-	//std::unique_ptr<OrthographicCamera> m_Camera;
-	std::unique_ptr<EditorCamera> m_Camera2;
-	//std::unique_ptr<PerspectiveCamera> m_Camera3;
-	GameState m_GameState = GameState::MainMenu;
 	Level m_Level;
-
-	float m_Time = 0.0f;
-	float m_CamWidth = CAM_WIDTH;
-	float m_CamHeight = CAM_HEIGHT;
 };
