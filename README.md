@@ -1,12 +1,13 @@
-# OpenGL-Core
-Work-in-progress OpenGL library that aims to provide a powerful sandbox for you to learn or experiment with OpenGL, and graphics programming in general.
+## Super Mario Bros. Clone
+WIP clone of original NES Mario game built using a custom OpenGL framework.  
+Which can be found here https://github.com/j-delrosario/OpenGL.git.  
 
 ## Usage
+Currently only supports Windows.
 
-Currently only "officially" supports Windows - Mac and Linux support is coming soon.
-
+Using Premake
 ```
-git clone --recursive https://github.com/TheCherno/OpenGL
+premake5 vs2019
 ```
-
-Run `scripts/Win-Premake.bat` and open `OpenGL-Sandbox.sln` in Visual Studio 2019. `OpenGL-Sandbox/src/SandboxLayer.cpp` contains the example OpenGL code that's running.
+`OpenGL-Sandbox.sln` in vs2019.  
+`OpenGL-Sandbox/src/` contains the game's files.
