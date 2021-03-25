@@ -11,10 +11,10 @@ namespace GLCore::RendererAPI {
 	struct RendererSpecs
 	{
 		const glm::vec3& position = {0.0f, 0.0f, 0.0f};
-		const glm::vec2& size = {0.0f, 0.0f};
+		const glm::vec2& size = {1.0f, 1.0f};
 		float rotation = 0.0f;
 		const glm::vec4& color = { 1.0f, 1.0f, 1.0f, 1.0f };
-		uint32_t textureID = 0.0f;
+		uint32_t textureID = 0;
 		const glm::vec4& texCoords = {0.0f, 0.0f, 1.0f, 1.0f};
 	};
 

@@ -7,6 +7,8 @@
 #include "Defines.h"
 
 #include "Level.h"
+#include "Menu.h"
+#include "LoadingScreen.h"
 
 using namespace GLCore;
 using namespace GLCore::Utils;
@@ -28,5 +30,26 @@ public:
 private:
 	void CreateCamera();
 private:
+	enum class GameState {
+		MainMenu = 0,
+		LoadingScreen = 1,
+		Play = 2,
+	};
+
 	Level m_Level;
+	Menu m_Menu;
+	LoadingScreen m_LoadingScreen;
+	uint32_t m_CurrentLevel = 0;
+	GameState m_GameState = GameState::MainMenu;
+	std::unique_ptr<EditorCamera> m_Camera;
+	std::unique_ptr<OrthographicCamera> m_Camera2;
+	ImFont* m_Font;
+	uint32_t m_HiScore = 0;
+
+	struct UIText {
+		std::string m_Text;
+		ImVec2 m_Position;
+		float m_FontSize;
+	};
+
 };
